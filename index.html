@@ -1,27 +1,212 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>switch.off</title>
-<!-- Page de redirection minimale, volontairement séparée du projet principal (dépôt dédié,
-     aucune autre donnée dedans) : sert uniquement de lien fixe (pour un QR code imprimé,
-     une affiche, etc.) vers l'adresse actuelle du tunnel qui rend le serveur local
-     joignable depuis internet — cette adresse peut changer si le tunnel redémarre, alors
-     que ce lien-ci (hébergé par GitHub Pages, gratuit et permanent) ne change jamais. Pour
-     mettre à jour la destination, il suffit de changer TARGET_URL ci-dessous et de publier
-     à nouveau cette page. -->
-<meta http-equiv="refresh" content="0; url=https://made-achieving-changed-yeast.trycloudflare.com">
+<!-- Page de redirection, volontairement séparée du projet principal (dépôt dédié, aucune
+     autre donnée dedans) : sert de lien fixe (pour un QR code imprimé, une affiche, etc.)
+     vers l'adresse actuelle du tunnel qui rend le serveur local joignable depuis internet
+     — cette adresse change à chaque redémarrage du tunnel, alors que ce lien-ci (hébergé
+     par Netlify, gratuit et permanent) ne change jamais. TARGET_URL est mis à jour et cette
+     page republiée automatiquement à chaque redémarrage du tunnel (voir
+     start-switchoff.ps1 côté serveur).
+
+     Service de secours : avant de rediriger, cette page vérifie que le serveur répond
+     vraiment (l'ordinateur qui l'héberge peut être éteint ou débranché du réseau — la
+     redirection automatique par balise <meta> ne pouvait pas faire cette vérification,
+     d'où son remplacement par la logique JS ci-dessous). S'il ne répond pas, un petit
+     formulaire d'inscription + réservation prend le relais : Netlify capte la soumission
+     telle quelle (data-netlify="true", aucun code serveur nécessaire ici), et le serveur
+     local l'importera automatiquement dans sa vraie base de données dès qu'il sera de
+     nouveau joignable (voir syncFallbackSubmissions dans server.js). -->
 <style>
-  body{font-family:system-ui,sans-serif;background:#241a23;color:#f8f4ec;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:24px;box-sizing:border-box;}
-  a{color:#7ec6d2;}
+  :root{--bg:#241a23;--text:#f8f4ec;--accent:#7ec6d2;--accent-2:#f7e627;--dim:#c9bfc4;--field-bg:#33262f;--border:#4a3a45;}
+  *{box-sizing:border-box;}
+  body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:24px;}
+  a{color:var(--accent);}
+  .card{max-width:440px;width:100%;}
+  #redirecting{}
+  #fallback{display:none;text-align:left;}
+  #fallback h1{font-size:20px;margin:0 0 8px;text-align:center;}
+  #fallback p.lead{color:var(--dim);font-size:14px;line-height:1.5;margin:0 0 22px;text-align:center;}
+  label{display:block;font-size:13px;margin:14px 0 5px;}
+  input,select{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--field-bg);color:var(--text);font-size:15px;}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+  .row2{display:flex;gap:10px;}
+  .row2>div{flex:1;}
+  .charte{display:flex;align-items:flex-start;gap:8px;margin-top:16px;font-size:13px;color:var(--dim);}
+  .charte input{width:auto;margin-top:3px;}
+  button{width:100%;margin-top:20px;padding:13px;border:none;border-radius:8px;background:var(--accent-2);color:#241a23;font-size:15px;font-weight:600;cursor:pointer;}
+  button:disabled{opacity:.5;cursor:default;}
+  .err{color:#ff8a8a;font-size:13px;margin-top:10px;display:none;}
+  .ok{display:none;text-align:center;}
+  .ok h1{font-size:20px;}
+  .hp{position:absolute;left:-9999px;}
 </style>
-<script>
-  var TARGET_URL = "https://made-achieving-changed-yeast.trycloudflare.com";
-  location.replace(TARGET_URL);
-</script>
 </head>
 <body>
-  <p>Redirection vers switch.off…<br><a href="https://made-achieving-changed-yeast.trycloudflare.com">Cliquez ici si la redirection ne fonctionne pas.</a></p>
+<div class="card">
+
+  <div id="redirecting">
+    <p>Redirection vers switch.off…<br><a id="manualLink" href="#">Cliquez ici si la redirection ne fonctionne pas.</a></p>
+  </div>
+
+  <div id="fallback">
+    <h1>Site temporairement injoignable</h1>
+    <p class="lead">L'ordinateur qui héberge switch.off est peut-être éteint ou déconnecté du réseau en ce moment. Vous pouvez tout de même vous inscrire et faire une demande de réservation ci-dessous — vos informations seront automatiquement transférées dans la vraie base dès que le site sera de nouveau en ligne, sans que vous ayez besoin de revenir.</p>
+
+    <form id="suForm" name="switchoff-fallback" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="switchoff-fallback">
+      <p class="hp"><label>Ne pas remplir : <input name="bot-field"></label></p>
+
+      <label for="fEmail">Adresse e-mail</label>
+      <input type="email" id="fEmail" name="email" autocomplete="email" required>
+
+      <label for="fPass">Mot de passe (8 caractères minimum)</label>
+      <input type="password" id="fPass" name="password" minlength="8" autocomplete="new-password" required>
+
+      <label for="fStatut">Vous êtes</label>
+      <select id="fStatut" name="statut" required>
+        <option value="etudiant">Étudiant·e</option>
+        <option value="professeur">Professeur·e</option>
+        <option value="administration">Administration</option>
+      </select>
+
+      <label for="fExp">Expérience souhaitée</label>
+      <select id="fExp" name="exp_id" required>
+        <option value="chuchotis">Chuchotis</option>
+        <option value="empreintes">Lignes invisibles</option>
+        <option value="latence">Pause &amp; bouger</option>
+      </select>
+
+      <div class="row2">
+        <div>
+          <label for="fDay">Jour souhaité</label>
+          <input type="date" id="fDay" name="pref_day" min="2026-11-09" max="2026-11-20" required>
+        </div>
+        <div>
+          <label for="fSlot">Créneau souhaité</label>
+          <select id="fSlot" name="pref_start_min" required></select>
+        </div>
+      </div>
+
+      <label class="charte"><input type="checkbox" required> J'ai lu et j'accepte la charte de confidentialité de switch.off.</label>
+
+      <button type="submit" id="suSubmit">S'inscrire et réserver</button>
+      <p class="err" id="suErr"></p>
+    </form>
+
+    <div class="ok" id="suOk">
+      <h1>Merci !</h1>
+      <p class="lead">Votre inscription et votre demande ont bien été enregistrées. Elles seront automatiquement intégrées à la vraie base de données dès que le site sera de nouveau en ligne — inutile de revenir ou de recommencer.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var TARGET_URL = "https://made-achieving-changed-yeast.trycloudflare.com";
+  document.getElementById('manualLink').href = TARGET_URL;
+
+  // Créneaux par expérience (minutes depuis minuit) — dupliqués depuis EXPERIENCES côté
+  // server.js et experiences[] côté switch-off.html, comme partout ailleurs dans ce
+  // projet ; à garder synchronisé si les horaires changent un jour.
+  var SLOTS = {
+    chuchotis:  {step: 15, from: 600, to: 1005},   // 10h00 -> 16h45 (creneaux de 15 min)
+    empreintes: {list: [600, 680, 760, 840, 920, 1000]}, // 10h00, 11h20, 12h40, 14h00, 15h20, 16h40
+    latence:    {list: [630, 660, 930, 960]}       // 10h30, 11h00, 15h30, 16h00
+  };
+  function fmt(min){
+    var h = Math.floor(min/60), m = min%60;
+    return (h<10?'0':'')+h+'h'+(m<10?'0':'')+m;
+  }
+  function slotsFor(expId){
+    var s = SLOTS[expId];
+    if(!s) return [];
+    if(s.list) return s.list.slice();
+    var out = [];
+    for(var t = s.from; t <= s.to; t += s.step) out.push(t);
+    return out;
+  }
+  function populateSlots(){
+    var sel = document.getElementById('fSlot');
+    var expId = document.getElementById('fExp').value;
+    sel.innerHTML = '';
+    slotsFor(expId).forEach(function(min){
+      var opt = document.createElement('option');
+      opt.value = min;
+      opt.textContent = fmt(min);
+      sel.appendChild(opt);
+    });
+  }
+  document.getElementById('fExp').addEventListener('change', populateSlots);
+  populateSlots();
+
+  // Sonde de disponibilité : appelle /api/health (server.js) en mode CORS normal, PAS
+  // "no-cors". Bug réel corrigé : un fetch "no-cors" réussit dès qu'UNE réponse arrive,
+  // même une page d'erreur Cloudflare — ce qui arrive quand le tunnel Cloudflare
+  // lui-même répond mais ne peut pas joindre l'ordinateur qui héberge switch.off (ex.
+  // ordinateur en mode avion/déconnecté : constaté en test réel, la redirection
+  // s'effectuait quand même vers une page vide/erreur au lieu d'afficher ce formulaire.
+  // /api/health est la seule route de server.js à répondre avec
+  // Access-Control-Allow-Origin — une page d'erreur Cloudflare ne l'aura jamais, donc le
+  // fetch échouera (rejet, bloqué par le navigateur faute d'en-tête CORS) exactement
+  // quand il le faut, au lieu de sembler réussir à tort.
+  function probe(url, timeoutMs){
+    return new Promise(function(resolve){
+      var settled = false;
+      var timer = setTimeout(function(){ if(!settled){ settled = true; resolve(false); } }, timeoutMs);
+      fetch(url + '/api/health', {cache:'no-store'}).then(function(r){
+        if(!settled){ settled = true; clearTimeout(timer); resolve(r.ok); }
+      }).catch(function(){
+        if(!settled){ settled = true; clearTimeout(timer); resolve(false); }
+      });
+    });
+  }
+
+  probe(TARGET_URL, 6000).then(function(reachable){
+    if(reachable){
+      location.replace(TARGET_URL);
+    } else {
+      document.getElementById('redirecting').style.display = 'none';
+      document.getElementById('fallback').style.display = 'block';
+    }
+  });
+
+  // Soumission en AJAX (plutôt qu'une vraie navigation) pour pouvoir afficher le message
+  // de remerciement sans recharger la page — voir la doc Netlify Forms pour ce format
+  // d'encodage exact (application/x-www-form-urlencoded vers "/").
+  document.getElementById('suForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var errEl = document.getElementById('suErr');
+    errEl.style.display = 'none';
+    var form = e.target;
+    var data = new FormData(form);
+    var params = new URLSearchParams();
+    data.forEach(function(v,k){ params.append(k, v); });
+    var btn = document.getElementById('suSubmit');
+    btn.disabled = true;
+    // URL absolue du site Netlify (pas "/") : ce même fichier est aussi déployé tel quel
+    // sur GitHub Pages (lien de secours indépendant), qui lui n'a aucune capacité de
+    // traiter un formulaire — Netlify accepte volontairement les soumissions envoyées
+    // depuis un autre domaine vers un formulaire déjà détecté sur l'un de ses sites (voir
+    // leur doc "formulaire sur une page non construite par Netlify"), donc cibler cette
+    // URL absolue fonctionne dans les deux cas, qu'on soit déjà sur le domaine Netlify ou non.
+    fetch('https://switchoff-ecole.netlify.app/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: params.toString()
+    }).then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      form.style.display = 'none';
+      document.getElementById('suOk').style.display = 'block';
+    }).catch(function(){
+      errEl.textContent = "L'envoi a échoué — vérifiez votre connexion et réessayez.";
+      errEl.style.display = 'block';
+      btn.disabled = false;
+    });
+  });
+</script>
 </body>
 </html>
