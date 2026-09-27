@@ -83,6 +83,25 @@
   .error-msg{font-size:13px;color:var(--danger);display:none;}
   .error-msg.show{display:block;}
   .success-banner{background:rgba(143,209,91,0.15);border:1px solid var(--ok);color:var(--text);padding:14px 16px;border-radius:6px;font-size:13.5px;margin-top:24px;display:none;}
+
+  /* Cartes des 3 expériences (mêmes textes/couleurs que la page d'accueil du vrai site,
+     voir EXP_I18N dans switch-off.html) — ajoutées pour que la page de secours donne
+     autant d'information qu'une visite normale, pas juste un formulaire nu. */
+  html{--exp-chuchotis:#48acf0;--exp-empreintes:#d67ab1;--exp-latence:#a6d83d;}
+  .exp-columns{display:flex;flex-direction:column;gap:0;margin-top:32px;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .exp-card{background:var(--bg-alt);padding:20px 20px 22px;border-top:3px solid var(--exp-color, var(--accent));}
+  .exp-card+.exp-card{border-top:3px solid var(--exp-color, var(--accent));}
+  .exp-card h3{font-size:16.5px;font-weight:500;margin:0;}
+  .exp-card .room{display:inline-block;background:var(--exp-color, var(--accent));color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:100px;margin-top:8px;}
+  .exp-card p.short{color:var(--text-dim);font-size:14px;margin:10px 0 12px;}
+  .exp-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .expand-btn{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--line);color:var(--text);font-size:13px;padding:8px 12px;border-radius:6px;cursor:pointer;font-family:inherit;}
+  .exp-signup-btn{background:var(--exp-color, var(--accent));color:#1c1b19;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
+  .exp-detail{display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease;}
+  .exp-detail[data-open="true"]{grid-template-rows:1fr;}
+  .exp-detail-inner{overflow:hidden;}
+  .exp-detail p{font-size:13.5px;color:var(--text-dim);padding-top:12px;margin:0;}
+  .exp-detail .meta{font-size:12px;color:var(--accent);margin-top:8px;}
   .hp{position:absolute;left:-9999px;}
 </style>
 </head>
@@ -103,8 +122,12 @@
       <span class="wm"><span class="wm-switch">SWITCH</span><span class="wm-off">OFF</span></span>
     </div>
 
-    <h2 class="form-title">Créer votre compte</h2>
-    <p class="form-sub">Le site est momentanément injoignable (l'ordinateur qui l'héberge est peut-être éteint). Vous pouvez tout de même créer votre compte et indiquer l'expérience qui vous intéresse ci-dessous.</p>
+    <h2 class="form-title">Bienvenue sur switch.off</h2>
+    <p class="form-sub">Le site est momentanément injoignable (l'ordinateur qui l'héberge est peut-être éteint). Vous pouvez tout de même découvrir les expériences et vous inscrire ci-dessous — rien n'est perdu, votre inscription sera intégrée à la vraie base dès que le site sera de nouveau en ligne.</p>
+
+    <div class="exp-columns" id="expColumns"></div>
+
+    <h2 class="form-title" id="signupAnchor" style="margin-top:40px;">Créer votre compte</h2>
     <div class="notice">Votre inscription sera automatiquement intégrée à la vraie base de données dès que le site sera de nouveau en ligne — inutile de revenir ou de recommencer.</div>
 
     <form class="signup" id="suForm" name="switchoff-fallback" method="POST" data-netlify="true" netlify-honeypot="bot-field" novalidate>
@@ -191,6 +214,68 @@
   document.getElementById('charteToggle').addEventListener('click', function(){
     document.getElementById('charteText').classList.toggle('show');
   });
+
+  // Descriptions des 3 expériences — copiées telles quelles depuis EXP_I18N (switch-off.html,
+  // version française uniquement ici, cette page n'ayant pas le sélecteur de langue du vrai
+  // site) : à reporter ici aussi si ces textes changent un jour côté site principal.
+  var EXPERIENCES_INFO = [
+    {
+      id:'chuchotis', name:'Chuchotis', room:'Salle C2-12 / C2-14',
+      short:"Un casque, un fauteuil, rideaux fermés — et un petit test avant/après pour voir ce qui vous aide vraiment à vous concentrer.",
+      long:"Vous vous installez, vous passez un premier petit exercice de dictée, puis vous choisissez un son à écouter — silence, bruit blanc, sons naturels — avant de refaire l'exercice. L'idée : voir ce qui change réellement selon ce qu'on écoute, entre concentration, perception du temps et sensation d'être plus efficace.",
+      sched:"Créneaux de 15 min, de 10h à 17h"
+    },
+    {
+      id:'empreintes', name:'Lignes invisibles', room:'Salle B2-10',
+      short:"Se sentir un peu à l'écart au milieu de tout le monde, c'est possible ? On teste plusieurs façons de s'installer pour voir ce qui marche.",
+      long:"Dans l'agora, plusieurs dispositifs sont à votre disposition — un fauteuil à capuche, un canapé, une séparation acoustique — pour chercher ce qui donne le plus cette impression d'être un peu à part, même entouré. Un médiateur reste sur place pendant toute la séance, qui dure une vingtaine de minutes.",
+      sched:"Créneaux de 20 min, de 10h à 17h"
+    },
+    {
+      id:'latence', name:'Pause & bouger', room:'Salle C4-19',
+      short:"Une vraie pause active guidée : 30 minutes d'échauffement, de mouvement et d'étirements, en musique.",
+      long:"Un médiateur vous accueille et vous explique les consignes, vous enlevez vos chaussures, et c'est parti pour une séance guidée de 30 minutes : un échauffement complet (nuque, épaules, chevilles…), une partie plus dynamique (sauts, tours sur soi-même, marche en rond), puis des étirements au sol pour redescendre en douceur. Un petit questionnaire avant et après pour voir ce que ça change.",
+      sched:"Créneaux de 10h30, 11h, 15h30 et 16h"
+    }
+  ];
+  function renderExpColumns(){
+    var container = document.getElementById('expColumns');
+    EXPERIENCES_INFO.forEach(function(exp){
+      var card = document.createElement('div');
+      card.className = 'exp-card';
+      card.style.setProperty('--exp-color', 'var(--exp-' + exp.id + ')');
+      card.innerHTML =
+        '<h3>' + exp.name + '</h3>' +
+        '<span class="room">' + exp.room + '</span>' +
+        '<p class="short">' + exp.short + '</p>' +
+        '<div class="exp-actions">' +
+          '<button type="button" class="expand-btn" aria-expanded="false"><span>+</span> En savoir plus</button>' +
+          '<button type="button" class="exp-signup-btn">S\'inscrire</button>' +
+        '</div>' +
+        '<div class="exp-detail" data-open="false">' +
+          '<div class="exp-detail-inner">' +
+            '<p>' + exp.long + '</p>' +
+            '<div class="meta">' + exp.sched + '</div>' +
+            '<div class="meta"><strong>Présentez-vous 5 min avant votre créneau.</strong></div>' +
+          '</div>' +
+        '</div>';
+      var expandBtn = card.querySelector('.expand-btn');
+      var detail = card.querySelector('.exp-detail');
+      expandBtn.addEventListener('click', function(){
+        var open = detail.getAttribute('data-open') === 'true';
+        detail.setAttribute('data-open', open ? 'false' : 'true');
+        expandBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      });
+      card.querySelector('.exp-signup-btn').addEventListener('click', function(){
+        document.getElementById('fExp').value = exp.id;
+        populateSlots();
+        document.getElementById('signupAnchor').scrollIntoView({behavior:'smooth', block:'start'});
+        document.getElementById('fEmail').focus();
+      });
+      container.appendChild(card);
+    });
+  }
+  renderExpColumns();
 
   // Créneaux par expérience (minutes depuis minuit) — dupliqués depuis EXPERIENCES côté
   // server.js et experiences[] côté switch-off.html, comme partout ailleurs dans ce
