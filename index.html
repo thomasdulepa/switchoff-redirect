@@ -172,7 +172,7 @@
       <div class="row2">
         <div class="field">
           <label for="fDay">Jour souhaité <span class="req">*</span></label>
-          <input type="date" id="fDay" name="pref_day" min="2026-11-09" max="2026-11-20" required>
+          <input type="date" id="fDay" name="pref_day" min="2026-11-10" max="2026-11-20" required>
         </div>
         <div class="field">
           <label for="fSlot">Créneau souhaité <span class="req">*</span></label>
@@ -223,13 +223,13 @@
       id:'chuchotis', name:'Chuchotis', room:'Salle C2-12 / C2-14',
       short:"Un casque, un fauteuil, rideaux fermés, et un petit test avant/après pour voir ce qui vous aide vraiment à vous concentrer.",
       long:"Vous vous installez, vous passez un premier petit exercice de dictée, puis vous choisissez un son à écouter (silence, bruit blanc, sons naturels) avant de refaire l'exercice. L'idée : voir ce qui change réellement selon ce qu'on écoute, entre concentration, perception du temps et sensation d'être plus efficace.",
-      sched:"Créneaux de 15 min, de 10h à 17h"
+      sched:"Créneaux de 15 min, de 10h à 12h, 13h à 15h et 15h à 17h"
     },
     {
       id:'empreintes', name:'Lignes invisibles', room:'Salle B2-10',
       short:"Se sentir un peu à l'écart au milieu de tout le monde, c'est possible ? On teste plusieurs façons de s'installer pour voir ce qui marche.",
       long:"Dans la salle B2-10, plusieurs dispositifs sont à votre disposition (un fauteuil à capuche, un canapé, une séparation acoustique) pour chercher ce qui donne le plus cette impression d'être un peu à part, même entouré. Un médiateur reste sur place pendant toute la séance, qui dure une vingtaine de minutes.",
-      sched:"Créneaux de 20 min, de 10h à 17h"
+      sched:"Créneaux à 10h30 et 15h30"
     },
     {
       id:'latence', name:'Pause & bouger', room:'Salle C4-19',
@@ -277,12 +277,16 @@
   }
   renderExpColumns();
 
-  // Créneaux par expérience (minutes depuis minuit) — dupliqués depuis EXPERIENCES côté
-  // server.js et experiences[] côté switch-off.html, comme partout ailleurs dans ce
-  // projet ; à garder synchronisé si les horaires changent un jour.
+  // Créneaux par expérience (minutes depuis minuit) — dupliqués depuis EXPERIENCES/
+  // CHUCHOTIS_SLOTS côté server.js et experiences[] côté switch-off.html, comme partout
+  // ailleurs dans ce projet ; à garder synchronisé si ces horaires changent un jour.
+  // Chuchotis a une pause méridienne (12h-13h, non réservable) ; Lignes invisibles n'a
+  // plus qu'un seul créneau par fenêtre d'une heure (10h30 et 15h30, voir server.js pour
+  // le détail de cette contrainte) ; Pause & bouger est inchangé, ses 4 créneaux tombaient
+  // déjà dans ces deux mêmes fenêtres.
   var SLOTS = {
-    chuchotis:  {step: 15, from: 600, to: 1005},   // 10h00 -> 16h45 (creneaux de 15 min)
-    empreintes: {list: [600, 680, 760, 840, 920, 1000]}, // 10h00, 11h20, 12h40, 14h00, 15h20, 16h40
+    chuchotis:  {list: [600,615,630,645,660,675,690,705, 780,795,810,825,840,855,870,885, 900,915,930,945,960,975,990,1005]},
+    empreintes: {list: [630, 930]},                // 10h30, 15h30
     latence:    {list: [630, 660, 930, 960]}       // 10h30, 11h00, 15h30, 16h00
   };
   function fmt(min){
@@ -292,10 +296,7 @@
   function slotsFor(expId){
     var s = SLOTS[expId];
     if(!s) return [];
-    if(s.list) return s.list.slice();
-    var out = [];
-    for(var t = s.from; t <= s.to; t += s.step) out.push(t);
-    return out;
+    return s.list.slice();
   }
   function populateSlots(){
     var sel = document.getElementById('fSlot');
