@@ -113,7 +113,7 @@
       <span class="mark-logo"><img src="assets/logo-switchoff-transparent.png" alt="switch.off" width="64" height="64"></span>
       <span class="wm"><span class="wm-switch">SWITCH</span><span class="wm-off">OFF</span></span>
     </div>
-    <p style="margin-top:28px;">Redirection vers switch.off…<br><a id="manualLink" href="#">Cliquez ici si la redirection ne fonctionne pas.</a></p>
+    <p style="margin-top:28px;">Redirection vers switch.off…<br><span style="opacity:.7;font-size:.9em;">Cela peut prendre jusqu'à une minute si le site était en veille.</span><br><a id="manualLink" href="#">Cliquez ici si la redirection ne fonctionne pas.</a></p>
   </div>
 
   <div id="fallback">
@@ -201,8 +201,8 @@
 </div>
 
 <script>
-  var TARGET_URL = "https://leasing-physicians-narrow-entered.trycloudflare.com";
-  document.getElementById('manualLink').href = TARGET_URL;
+  var TARGET_URL = "https://switchoff.onrender.com";
+  document.getElementById('manualLink').href = TARGET_URL + location.pathname + location.search + location.hash;
 
   document.getElementById('pwToggle').addEventListener('click', function(){
     var input = document.getElementById('fPass');
@@ -332,9 +332,13 @@
     });
   }
 
-  probe(TARGET_URL, 6000).then(function(reachable){
+  // 60 s et pas quelques secondes : le site est hébergé sur l'offre gratuite de Render, qui
+  // met le service en veille après un moment sans visite et met ~30-50 s à le relancer.
+  // Chemin et paramètres (?unlock=...&code=...) conservés, pour qu'un lien vers une
+  // expérience passant par cette adresse arrive au bon endroit.
+  probe(TARGET_URL, 60000).then(function(reachable){
     if(reachable){
-      location.replace(TARGET_URL);
+      location.replace(TARGET_URL + location.pathname + location.search + location.hash);
     } else {
       document.getElementById('redirecting').style.display = 'none';
       document.getElementById('fallback').style.display = 'block';
